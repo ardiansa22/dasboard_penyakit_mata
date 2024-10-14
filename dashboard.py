@@ -39,7 +39,7 @@ with open("dissolved.geojson") as f:
     geojson_data = json.load(f)
 
 # Load the existing dataset
-dataset = pd.read_csv("all_data_mata.csv")
+dataset = pd.read_csv("All_data_mata.csv")
 dataset['block_code'] = dataset['block_code'].str.replace("Disorders of", " ",regex=False).str.strip()
 
 # File uploader to allow users to upload new dataWS
