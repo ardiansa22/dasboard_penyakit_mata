@@ -50,44 +50,33 @@ if uploaded_file is not None:
     dataset = pd.concat([dataset, new_data], ignore_index=True)
     st.sidebar.success("Data successfully uploaded and added to the existing dataset!")
 
-options_kecamatan = dataset['Kecamatan'].unique()
+# Add "All" option to kecamatan selection
+options_kecamatan = ["All"] + list(dataset['Kecamatan'].unique())
 options_tahun = dataset['Tahun'].unique()
 
 # Title
 st.title("Dashboard Penyebaran Penyakit Mata di Kabupaten Pangandaran")
 
+# Select boxes for filters
 selected_option_kecamatan = st.selectbox('Pilih Opsi Kecamatan:', options_kecamatan)
 selected_option_tahun = st.selectbox('Pilih Opsi Tahun:', options_tahun)
 
-kategori_penyakit_mata = fungsi_kategori_penyakit (dataset,selected_option_kecamatan,selected_option_tahun)
-top_10_diagnosis = fungsi_diagnosis_primer (dataset,selected_option_kecamatan,selected_option_tahun) 
-waktu_penyebaran = fungsi_penyebaran_tahunan(dataset,selected_option_kecamatan,selected_option_tahun)
+# Apply filters to the dataset for the map
+if selected_option_kecamatan == "All":
+    filtered_map_dataset = dataset[dataset['Tahun'] == selected_option_tahun]
+else:
+    filtered_map_dataset = dataset[(dataset['Kecamatan'] == selected_option_kecamatan) & (dataset['Tahun'] == selected_option_tahun)]
 
-kategori_penyakit = px.line(kategori_penyakit_mata, x=kategori_penyakit_mata['block_code'], y=kategori_penyakit_mata['count'], title=f"Kategori Penyakit Mata di Kecamatan {selected_option_kecamatan}")
-fig_business = px.bar(top_10_diagnosis, x=top_10_diagnosis['Diagnosis Primer'], y=top_10_diagnosis['count'], title=f"10 Diagnosis Penyakit Mata tertinggi di Kecamatan {selected_option_kecamatan}")
-fig_region = px.bar(waktu_penyebaran, x=waktu_penyebaran['Nama_Bulan'], y=waktu_penyebaran['count'], title=f"Time Series Penyakit Mata Di Kecamatan {selected_option_kecamatan} pada tahun {selected_option_tahun}")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.plotly_chart(kategori_penyakit, use_container_width=True)
-
-with col2:
-    st.plotly_chart(fig_business, use_container_width=True)
-
-with col3:
-    st.plotly_chart(fig_region, use_container_width=True)
-
+# maps spreading eyes disease with filters
 fig_choropleth = px.choropleth_mapbox(
-    dataset, 
+    filtered_map_dataset, 
     geojson=geojson_data, 
     locations='Kecamatan', 
     color='cluster',
     featureidkey="properties.WADMKC",
     mapbox_style="open-street-map",
-    center={"lat": dataset['Lat'].mean(), "lon": dataset['Long'].mean()},
+    center={"lat": filtered_map_dataset['Lat'].mean(), "lon": filtered_map_dataset['Long'].mean()},
     zoom=9,
-    labels={"cluster": "Tingkat Penyebaran"},
     hover_data=["total_pasien"]
 )
 
@@ -97,5 +86,26 @@ fig_choropleth.update_layout(
 )
 
 st.plotly_chart(fig_choropleth, use_container_width=True)
+
+# Ensure other visualizations are filtered by selected kecamatan (excluding "All" logic)
+if selected_option_kecamatan != "All":
+    kategori_penyakit_mata = fungsi_kategori_penyakit(dataset, selected_option_kecamatan, selected_option_tahun)
+    top_10_diagnosis = fungsi_diagnosis_primer(dataset, selected_option_kecamatan, selected_option_tahun)
+    waktu_penyebaran = fungsi_penyebaran_tahunan(dataset, selected_option_kecamatan, selected_option_tahun)
+
+    kategori_penyakit = px.line(kategori_penyakit_mata, x=kategori_penyakit_mata['block_code'], y=kategori_penyakit_mata['count'], title=f"Kategori Penyakit Mata di Kecamatan {selected_option_kecamatan}")
+    fig_business = px.bar(top_10_diagnosis, x=top_10_diagnosis['Diagnosis Primer'], y=top_10_diagnosis['count'], title=f"10 Diagnosis Penyakit Mata tertinggi di Kecamatan {selected_option_kecamatan}")
+    fig_region = px.bar(waktu_penyebaran, x=waktu_penyebaran['Nama_Bulan'], y=waktu_penyebaran['count'], title=f"Time Series Penyakit Mata Di Kecamatan {selected_option_kecamatan} pada tahun {selected_option_tahun}")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.plotly_chart(kategori_penyakit, use_container_width=True)
+
+    with col2:
+        st.plotly_chart(fig_business, use_container_width=True)
+
+    with col3:
+        st.plotly_chart(fig_region, use_container_width=True)
 
 st.caption("Copyright by Ferian Ardiansa Junardi")
